@@ -1,3 +1,4 @@
+/* Sprint 2 ->User Story: 1*/
 import express from "express"
 import { LogOut, Login, SignUp } from "../routControler/authControler.js";
 import isLogin from "../middleware/isLogin.js";
@@ -9,6 +10,7 @@ router.post('/login',Login)
 router.post('/signup',SignUp)
 
 router.post('/logout',isLogin,LogOut)
+
 
 
 export default router
