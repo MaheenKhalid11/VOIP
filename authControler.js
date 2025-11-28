@@ -1,3 +1,4 @@
+/* Sprint 2 -> User Story 2 */
 import User from "../schema/userSchema.js"
 import bcrypt from "bcryptjs"
 import jwtToken from "../utils/jwtToken.js";
@@ -90,4 +91,5 @@ export const LogOut = async (req, res) => {
         })
         console.log(error);
     }
+
 }
