@@ -197,3 +197,4 @@ const AuthForm = ({ type }) => {
 };
 
 export default AuthForm;
+
