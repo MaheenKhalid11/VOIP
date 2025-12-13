@@ -11,22 +11,22 @@ import authRoute from "./rout/authRout.js"; // Import authentication routes (log
 import userRoute from "./rout/userRout.js"; // Import user-related routes (profile, settings)
 import dbConnection from "./db/dbConnect.js"; // Import function to connect to MongoDB database
 
-// ✅ Load environment variables (from .env file)
+// Load environment variables (from .env file)
 dotenv.config();
 
-// 🌍 Create an Express application
+// Create an Express application
 const app = express(); 
 
-// 🔧 Set up server port (from .env or default to 3000)
+// Set up server port (from .env or default to 3000)
 const PORT = process.env.PORT || 3000;
 
-// 📡 Create an HTTP server to work with Express (needed for WebSockets)
+// Create an HTTP server to work with Express (needed for WebSockets)
 const server = createServer(app);
 
-// 🌍 Allowed frontend origins for CORS (Cross-Origin Resource Sharing)
+// Allowed frontend origins for CORS (Cross-Origin Resource Sharing)
 // Debugging: Check if the frontend URL is loaded properly
 
-// 🔧 Middleware to handle CORS
+//  Middleware to handle CORS
 // After:
 app.use(cors({
   origin: process.env.FRONTEND_URL, // http://172.19.154.86:5173
@@ -37,20 +37,20 @@ app.use(cors({
 
 
 
-// 🛠 Middleware for handling JSON requests and cookies
+// Middleware for handling JSON requests and cookies
 app.use(express.json()); // Enables parsing of JSON request bodies
 app.use(cookieParser()); // Enables reading cookies in HTTP requests
 
-// 🔗 Define API routes
+//  Define API routes
 app.use("/api/auth", authRoute); // Authentication routes (login, signup, logout)
 app.use("/api/user", userRoute); // User-related routes (profile, settings)
 
-// ✅ Test Route to check if the server is running
+//  Test Route to check if the server is running
 app.get("/ok", (req, res) => {
   res.json({ message: "Server is running!" }); // Returns a JSON response
 });
 
-// 🔥 Initialize Socket.io for real-time communication
+// Initialize Socket.io for real-time communication
  const io = new Server(server, {
   cors: {
     origin: process.env.FRONTEND_URL,
@@ -61,18 +61,18 @@ app.get("/ok", (req, res) => {
 
 console.log("[SUCCESS] Socket.io initialized with CORS"); // Debugging message
 
-// 🟢 Store online users and active calls
+//  Store online users and active calls
 let onlineUsers = []; // Array to store online users
 const activeCalls = new Map(); // Map to track ongoing calls
 
-// 📞 Handle WebSocket (Socket.io) connections
+// Handle WebSocket (Socket.io) connections
 io.on("connection", (socket) => {
   console.log([INFO] New connection: ${socket.id}); // Debugging: New user connected
 
-  // 🔹 Emit an event to send the socket ID to the connected user
+  //  Emit an event to send the socket ID to the connected user
   socket.emit("me", socket.id);
 
-  // 📡 User joins the chat system
+  // User joins the chat system
   socket.on("join", (user) => {
     if (!user || !user.id) {
       console.warn("[WARNING] Invalid user data on join"); // Warn if user data is missing
@@ -85,7 +85,7 @@ io.on("connection", (socket) => {
     if (existingUser) {
       existingUser.socketId = socket.id; // Update socket ID if user reconnects
     } else {
-      // 🟢 Add new user to online users list
+      //  Add new user to online users list
       onlineUsers.push({
         userId: user.id,
         name: user.name,
@@ -96,7 +96,7 @@ io.on("connection", (socket) => {
     io.emit("online-users", onlineUsers); // 🔹 Broadcast updated online users list
   });
 
-  // 📞 Handle outgoing call request
+  //  Handle outgoing call request
   socket.on("callToUser", (data) => {
     const callee = onlineUsers.find((user) => user.userId === data.callToUserId); // Find the user being called
     
@@ -107,7 +107,7 @@ io.on("connection", (socket) => {
     }
 
 
-    // 🚫 If the user is already in another call
+    //  If the user is already in another call
     if (activeCalls.has(data.callToUserId)) {
       socket.emit("userBusy", { message: "User is currently in another call." });
 
@@ -121,7 +121,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // 📞 Emit an event to the receiver's socket (callee)
+    //  Emit an event to the receiver's socket (callee)
     io.to(callee.socketId).emit("callToUser", {
       signal: data.signalData, // WebRTC signal data
       from: data.from, // Caller ID
@@ -131,19 +131,19 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 📞 Handle when a call is accepted
+  // Handle when a call is accepted
   socket.on("answeredCall", (data) => {
     io.to(data.to).emit("callAccepted", {
       signal: data.signal, // WebRTC signal
       from: data.from, // Caller ID
     });
 
-    // 📌 Track active calls in a Map
+    //  Track active calls in a Map
     activeCalls.set(data.from, { with: data.to, socketId: socket.id });
     activeCalls.set(data.to, { with: data.from, socketId: data.to });
   });
 
-  // ❌ Handle call rejection
+  //  Handle call rejection
   socket.on("reject-call", (data) => {
     io.to(data.to).emit("callRejected", {
       name: data.name, // Rejected user's name
@@ -151,51 +151,51 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 📴 Handle call ending
+  //  Handle call ending
   socket.on("call-ended", (data) => {
     io.to(data.to).emit("callEnded", {
       name: data.name, // User who ended the call
     });
 
-    // 🔥 Remove call from active calls
+    //  Remove call from active calls
     activeCalls.delete(data.from);
     activeCalls.delete(data.to);
   });
 
-  // ❌ Handle user disconnecting from the server
+  //  Handle user disconnecting from the server
   socket.on("disconnect", () => {
     const user = onlineUsers.find((u) => u.socketId === socket.id); // Find the disconnected user
     if (user) {
       activeCalls.delete(user.userId); // Remove the user from active calls
 
-      // 🔥 Remove all calls associated with this user
+      //  Remove all calls associated with this user
       for (const [key, value] of activeCalls.entries()) {
         if (value.with === user.userId) activeCalls.delete(key);
       }
     }
 
-    // 🔥 Remove user from the online users list
+    //  Remove user from the online users list
     onlineUsers = onlineUsers.filter((user) => user.socketId !== socket.id);
     
-    // 🔹 Broadcast updated online users list
+    //  Broadcast updated online users list
     io.emit("online-users", onlineUsers);
 
-    // 🔹 Notify others that the user has disconnected
+    //  Notify others that the user has disconnected
     socket.broadcast.emit("discounnectUser", { disUser: socket.id });
 
     console.log([INFO] Disconnected: ${socket.id}); // Debugging: User disconnected
   });
 });
 
-// 🏁 Start the server after connecting to the database
+//  Start the server after connecting to the database
 (async () => {
   try {
     await dbConnection(); // Connect to MongoDB
     server.listen(PORT, () => {
-      console.log(✅ Server is running on port ${PORT});
+      console.log( Server is running on port ${PORT});
     });
   } catch (error) {
-    console.error("❌ Failed to connect to the database:", error);
+    console.error(" Failed to connect to the database:", error);
     process.exit(1); // Exit the process if the database connection fails
   }
 })();
